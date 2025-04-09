@@ -73,9 +73,7 @@
       display: block;
     }
   </style>
-  <!-- Ajout de Tone.js via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/tone@next"></script>
-
+  
 </head>
 <body>
 
@@ -185,8 +183,6 @@
       loop();
     }, 1000);
 
-    if (!audioContext) await loadMusic();
-    playMusic();
   });
    // Ajouter la musique avec Tone.js
    const bgMusic = new Tone.Player("assets/neon-gaming.mp3").toDestination();
