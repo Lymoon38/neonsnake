@@ -74,7 +74,7 @@
     }
   </style>
   <!-- Ajout de Tone.js via CDN -->
-<script src="https://cdn.jsdelivr.net/npm/tone@next"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tone@next"></script>
 
 </head>
 <body>
@@ -177,47 +177,6 @@
     draw();
     requestAnimationFrame(loop);
   }
-
-  // Web Audio API
-  let audioContext;
-  let musicBuffer;
-  let musicSource;
-  let isPlaying = false;
-
-  async function loadMusic() {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const response = await fetch("audio/background-music.mp3");
-    const arrayBuffer = await response.arrayBuffer();
-    musicBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  }
-
-  function playMusic() {
-    if (!musicBuffer) return;
-    stopMusic();
-    musicSource = audioContext.createBufferSource();
-    musicSource.buffer = musicBuffer;
-    musicSource.loop = true;
-    musicSource.connect(audioContext.destination);
-    musicSource.start(0);
-    isPlaying = true;
-    document.getElementById("music-toggle").textContent = "🔊";
-  }
-
-  function stopMusic() {
-    if (musicSource) {
-      musicSource.stop();
-      musicSource.disconnect();
-      isPlaying = false;
-      document.getElementById("music-toggle").textContent = "🔇";
-    }
-  }
-
-  document.getElementById("music-toggle").addEventListener("click", () => {
-    if (!audioContext) return;
-    if (isPlaying) stopMusic();
-    else playMusic();
-  });
-
   document.getElementById("start-button").addEventListener("click", async () => {
     document.getElementById("start-screen").style.opacity = "0";
     setTimeout(() => {
