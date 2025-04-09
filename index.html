@@ -73,7 +73,9 @@
       display: block;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/tone@14.8.28/build/Tone.js"></script>
+  <!-- Ajout de Tone.js via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tone@next"></script>
+
 </head>
 <body>
 
@@ -227,6 +229,22 @@
     if (!audioContext) await loadMusic();
     playMusic();
   });
+   // Ajouter la musique avec Tone.js
+   const bgMusic = new Tone.Player("assets/neon-gaming.mp3").toDestination();
+
+// Démarrer la musique lorsque l'utilisateur clique
+document.getElementById("start-button").addEventListener("click", async () => {
+  document.getElementById("start-screen").style.opacity = "0";
+  setTimeout(() => {
+    document.getElementById("start-screen").style.display = "none";
+    document.getElementById("score").style.display = "block";
+    loop();
+  }, 1000);
+
+  // Attendre que Tone.js se charge et démarrer la musique
+  await Tone.start();
+  bgMusic.autostart = true;
+});
 </script>
 </body>
 </html>
