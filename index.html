@@ -2,116 +2,231 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NeonSnake</title>
-  <script src="https://cdn.jsdelivr.net/npm/tone@14.8.28/build/Tone.js"></script>
   <style>
     body {
-      background: #0f0f0f;
-      color: #fff;
       margin: 0;
+      background: radial-gradient(circle, #000000, #111111);
+      color: #00ffff;
+      font-family: 'Courier New', Courier, monospace;
       overflow: hidden;
     }
-    #gameCanvas {
-      display: block;
-      margin: 0 auto;
+
+    #start-screen {
+      position: absolute;
+      width: 100%;
+      height: 100%;
       background: black;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      transition: opacity 1s ease;
     }
-    #music-toggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 10px;
-      font-size: 18px;
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
+
+    #start-screen h1 {
+      font-size: 4rem;
+      color: #00ffff;
+      text-shadow: 0 0 20px #00ffff;
+      margin-bottom: 2rem;
+    }
+
+    #start-button {
+      padding: 1rem 2rem;
+      font-size: 1.5rem;
+      color: #000;
+      background: #00ffff;
       border: none;
+      border-radius: 1rem;
       cursor: pointer;
+      box-shadow: 0 0 10px #00ffff;
+      transition: background 0.3s;
+    }
+
+    #start-button:hover {
+      background: #00cccc;
+    }
+
+    #music-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: #00ffff;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 20;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 1.5rem;
+      z-index: 5;
+      display: none;
+    }
+
+    canvas {
+      display: block;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.8.28/build/Tone.js"></script>
 </head>
 <body>
-  <button id="music-toggle">🔊</button>
-  <canvas id="gameCanvas"></canvas>
 
-  <script>
-    // Initialisation du canvas et du jeu
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+<div id="start-screen">
+  <h1>NeonSnake</h1>
+  <button id="start-button">Jouer</button>
+</div>
 
-    // Variables pour le serpent
-    let snake = [{ x: 50, y: 50 }];
-    let snakeLength = 1;
-    const snakeSpeed = 10;
-    const direction = { x: 0, y: 0 };
+<div id="score">Score: 0</div>
+<button id="music-toggle">🔊</button>
+<canvas id="gameCanvas"></canvas>
 
-    // Musique avec Tone.js
-    const synth = new Tone.Synth().toDestination(); // Synthétiseur pour la musique
-    const loop = new Tone.Loop(function(time) {
-      synth.triggerAttackRelease("C4", "8n", time);
-    }, "4n").start();
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 
-    Tone.Transport.start(); // Démarre la musique de fond
+  const snake = [{ x: canvas.width / 2, y: canvas.height / 2 }];
+  let score = 0;
+  let orbs = [];
+  const orbCount = 50;
 
-    // Fonction pour démarrer/arrêter la musique avec le bouton
-    document.getElementById("music-toggle").addEventListener("click", function() {
-      if (Tone.Transport.state === "started") {
-        Tone.Transport.stop(); // Arrête la musique
-        this.textContent = "🔇"; // Change le texte du bouton
-      } else {
-        Tone.Transport.start(); // Démarre la musique
-        this.textContent = "🔊"; // Change le texte du bouton
-      }
+  function createOrb() {
+    return {
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: 5 + Math.random() * 5
+    };
+  }
+
+  for (let i = 0; i < orbCount; i++) {
+    orbs.push(createOrb());
+  }
+
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  document.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  function draw() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw orbs
+    orbs.forEach(orb => {
+      ctx.beginPath();
+      ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#00ffff';
+      ctx.shadowColor = '#00ffff';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
     });
 
-    // Fonction pour dessiner le serpent
-    function drawSnake() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height); // Efface le canvas
-      for (let i = 0; i < snake.length; i++) {
-        ctx.fillStyle = 'lime';
-        ctx.fillRect(snake[i].x, snake[i].y, 10, 10); // Dessine chaque segment du serpent
-      }
+    // Move snake
+    const head = { ...snake[0] };
+    const dx = mouse.x - head.x;
+    const dy = mouse.y - head.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const speed = 3;
+    head.x += (dx / dist) * speed;
+    head.y += (dy / dist) * speed;
+    snake.unshift(head);
+
+    while (snake.length > 50 + score) {
+      snake.pop();
     }
 
-    // Fonction pour déplacer le serpent
-    function moveSnake() {
-      const head = { ...snake[0] };
-      head.x += direction.x * snakeSpeed;
-      head.y += direction.y * snakeSpeed;
-      snake.unshift(head); // Ajoute un nouveau segment à l'avant du serpent
-      if (snake.length > snakeLength) {
-        snake.pop(); // Supprime le dernier segment du serpent pour le garder à la bonne taille
+    // Eat orbs
+    orbs = orbs.filter(orb => {
+      const d = Math.hypot(orb.x - head.x, orb.y - head.y);
+      if (d < orb.radius + 10) {
+        score++;
+        document.getElementById('score').textContent = 'Score: ' + score;
+        return false;
       }
-    }
-
-    // Gérer les touches pour déplacer le serpent
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowUp" && direction.y === 0) {
-        direction.x = 0;
-        direction.y = -1;
-      } else if (e.key === "ArrowDown" && direction.y === 0) {
-        direction.x = 0;
-        direction.y = 1;
-      } else if (e.key === "ArrowLeft" && direction.x === 0) {
-        direction.x = -1;
-        direction.y = 0;
-      } else if (e.key === "ArrowRight" && direction.x === 0) {
-        direction.x = 1;
-        direction.y = 0;
-      }
+      return true;
     });
 
-    // Boucle principale du jeu
-    function gameLoop() {
-      moveSnake();
-      drawSnake();
-      requestAnimationFrame(gameLoop);
+    while (orbs.length < orbCount) {
+      orbs.push(createOrb());
     }
 
-    // Démarre le jeu
-    gameLoop();
-  </script>
+    // Draw snake
+    snake.forEach((seg, i) => {
+      ctx.beginPath();
+      ctx.arc(seg.x, seg.y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = `hsl(${(i * 10 + score * 5) % 360}, 100%, 50%)`;
+      ctx.shadowColor = '#fff';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
+
+  function loop() {
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Web Audio API
+  let audioContext;
+  let musicBuffer;
+  let musicSource;
+  let isPlaying = false;
+
+  async function loadMusic() {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const response = await fetch("audio/background-music.mp3");
+    const arrayBuffer = await response.arrayBuffer();
+    musicBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  }
+
+  function playMusic() {
+    if (!musicBuffer) return;
+    stopMusic();
+    musicSource = audioContext.createBufferSource();
+    musicSource.buffer = musicBuffer;
+    musicSource.loop = true;
+    musicSource.connect(audioContext.destination);
+    musicSource.start(0);
+    isPlaying = true;
+    document.getElementById("music-toggle").textContent = "🔊";
+  }
+
+  function stopMusic() {
+    if (musicSource) {
+      musicSource.stop();
+      musicSource.disconnect();
+      isPlaying = false;
+      document.getElementById("music-toggle").textContent = "🔇";
+    }
+  }
+
+  document.getElementById("music-toggle").addEventListener("click", () => {
+    if (!audioContext) return;
+    if (isPlaying) stopMusic();
+    else playMusic();
+  });
+
+  document.getElementById("start-button").addEventListener("click", async () => {
+    document.getElementById("start-screen").style.opacity = "0";
+    setTimeout(() => {
+      document.getElementById("start-screen").style.display = "none";
+      document.getElementById("score").style.display = "block";
+      loop();
+    }, 1000);
+
+    if (!audioContext) await loadMusic();
+    playMusic();
+  });
+</script>
 </body>
 </html>
