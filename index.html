@@ -25,11 +25,19 @@
       transition: opacity 1s ease;
     }
 
+    #planet-canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
     #start-screen h1 {
       font-size: 4rem;
       color: #00ffff;
       text-shadow: 0 0 20px #00ffff;
       margin-bottom: 2rem;
+      z-index: 2;
     }
 
     #start-button {
@@ -42,6 +50,7 @@
       cursor: pointer;
       box-shadow: 0 0 10px #00ffff;
       transition: background 0.3s;
+      z-index: 2;
     }
 
     #start-button:hover {
@@ -78,6 +87,7 @@
 </head>
 <body>
 <div id="start-screen">
+  <canvas id="planet-canvas"></canvas>
   <h1>NeonSnake</h1>
   <button id="start-button">Jouer</button>
 </div>
@@ -86,8 +96,55 @@
 <button id="music-toggle">🔊</button>
 <canvas id="gameCanvas"></canvas>
 
+<div id="game-over-screen" style="display: none; position: absolute; top: 0; left: 0; 
+  width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10;
+  display: flex; justify-content: center; align-items: center; flex-direction: column;">
+  <h2 style="color: #00ffff; font-size: 3rem; margin-bottom: 2rem;">Game Over</h2>
+  <button id="replay-button" style="padding: 1rem 2rem; font-size: 1.5rem; 
+    background: #00ffff; color: #000; border: none; border-radius: 1rem; 
+    box-shadow: 0 0 15px #00ffff; cursor: pointer;">Rejouer</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/tone@next"></script>
 <script>
+  const planetCanvas = document.getElementById('planet-canvas');
+  const pCtx = planetCanvas.getContext('2d');
+  planetCanvas.width = window.innerWidth;
+  planetCanvas.height = window.innerHeight;
+
+  const planets = Array.from({ length: 5 }, () => ({
+    x: Math.random() * planetCanvas.width,
+    y: Math.random() * planetCanvas.height,
+    radius: 30 + Math.random() * 50,
+    hue: Math.random() * 360,
+    hasRings: Math.random() > 0.5
+  }));
+
+  function drawPlanets() {
+    pCtx.clearRect(0, 0, planetCanvas.width, planetCanvas.height);
+    planets.forEach(p => {
+      // Planet body
+      pCtx.beginPath();
+      pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      pCtx.fillStyle = `hsla(${p.hue}, 100%, 60%, 0.2)`;
+      pCtx.shadowColor = `hsl(${p.hue}, 100%, 70%)`;
+      pCtx.shadowBlur = 30;
+      pCtx.fill();
+
+      // Rings
+      if (p.hasRings) {
+        pCtx.beginPath();
+        pCtx.ellipse(p.x, p.y, p.radius * 1.5, p.radius * 0.5, 0, 0, Math.PI * 2);
+        pCtx.strokeStyle = `hsla(${p.hue}, 100%, 60%, 0.3)`;
+        pCtx.lineWidth = 2;
+        pCtx.stroke();
+      }
+
+      pCtx.shadowBlur = 0;
+    });
+  }
+  drawPlanets();
+
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   canvas.width = window.innerWidth;
@@ -134,7 +191,7 @@
     const dx = mouse.x - head.x;
     const dy = mouse.y - head.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const speed = 2; // Vitesse réduite ici
+    const speed = 2;
     head.x += (dx / dist) * speed;
     head.y += (dy / dist) * speed;
     snake.unshift(head);
@@ -171,11 +228,9 @@
         const eyeRadius = 12;
         const eyeOffsetX = 14;
         const eyeOffsetY = -14;
-
         const angle = Math.atan2(mouse.y - seg.y, mouse.x - seg.x);
         const pupilOffset = 4;
 
-        // Dessiner les yeux
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(seg.x - eyeOffsetX, seg.y + eyeOffsetY, eyeRadius, 0, Math.PI * 2);
@@ -192,14 +247,11 @@
         ctx.arc(seg.x + eyeOffsetX + Math.cos(angle) * pupilOffset, seg.y + eyeOffsetY + Math.sin(angle) * pupilOffset, 5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Dessiner la bouche : Une fine ligne noire qui suit la forme du serpent
-        const mouthWidth = 20; // Largeur de la bouche
-        const mouthOffsetY = 10;  // Un peu plus bas que les yeux
-        ctx.strokeStyle = '#000000'; // Couleur de la bouche
-        ctx.lineWidth = 2; // Fine ligne
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(seg.x - mouthWidth / 2, seg.y + mouthOffsetY);
-        ctx.lineTo(seg.x + mouthWidth / 2, seg.y + mouthOffsetY);
+        ctx.moveTo(seg.x - 6, seg.y + 16);
+        ctx.lineTo(seg.x + 6, seg.y + 16);
         ctx.stroke();
       }
     });
@@ -210,15 +262,7 @@
   }
 
   function restartGame() {
-    alert("Tu as touché le mur ! 😵‍💫 Nouvelle partie !");
-    snake.length = 0;
-    snake.push({ x: canvas.width / 2, y: canvas.height / 2 });
-    score = 0;
-    orbs = [];
-    for (let i = 0; i < orbCount; i++) {
-      orbs.push(createOrb());
-    }
-    document.getElementById('score').textContent = 'Score: 0';
+    document.getElementById('game-over-screen').style.display = 'flex';
   }
 
   function loop() {
@@ -238,7 +282,19 @@
     bgMusic.autostart = true;
   });
 
-  const bgMusic = new Tone.Player("assets/neon-gaming.mp3").toDestination();
+  document.getElementById("replay-button").addEventListener("click", () => {
+    document.getElementById("game-over-screen").style.display = "none";
+    snake.length = 0;
+    snake.push({ x: canvas.width / 2, y: canvas.height / 2 });
+    score = 0;
+    orbs = [];
+    for (let i = 0; i < orbCount; i++) {
+      orbs.push(createOrb());
+    }
+    document.getElementById('score').textContent = 'Score: 0';
+  });
+
+  const bgMusic = new Tone.Player("neonsnake/assets/neon-gaming.mp3").toDestination();
 </script>
 </body>
 </html>
